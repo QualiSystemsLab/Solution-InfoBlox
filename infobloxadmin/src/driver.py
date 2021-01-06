@@ -29,13 +29,14 @@ class InfobloxadminDriver (ResourceDriverInterface):
         """
         pass
 
-    def create_host_record(self, context, dns_name, ip_address, network_address, mac_address):
+    def create_host_record(self, context, dns_name, ip_address, network_address, mac_address, exclude_range):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
         :param str network_address:
         :param str dns_name:
         :param str mac_address:
+        :param str exclude_range:
         :return:
         """
         headers = {"ContentType": "application/json", "Accept": "*/*"}
@@ -64,6 +65,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
                                                        "_object_parameters": {"network": network_address},
                                                        "_parameters": {"num": 1},
                                                        "_result_field": "ips"}}]
+            if exclude_range:
+                request_body["ipv4addrs"][0]["ipv4addr"]["_parameters"]["exclude"] = exclude_range.split(",")
         else:
             raise Exception("'IP Address' or 'Network Address' must be supplied")
         request_body["ipv4addrs"][0]["view"] = infoblox_view
@@ -72,6 +75,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             request_body["ipv4addrs"][0]["mac"] = mac_address
             request_body["ipv4addrs"][0]["configure_for_dhcp"] = True
         try:
+            cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"Request:\n{request_body}")
             result = requests.post(infoblox_url, headers=headers, json=request_body,
                                    auth=HTTPBasicAuth(infoblox_username, infoblox_password), verify=False)
             content = result.content.decode()
@@ -83,4 +87,31 @@ class InfobloxadminDriver (ResourceDriverInterface):
         except Exception as e:
             raise Exception(f"Error sending request to InfoBlox. Error: {e}")
 
+    def get_host_record_by_name(self, context, dns_name):
+        """
+        :param ResourceCommandContext context:
+        :param str dns_name:
+        :return:
+        """
+        headers = {"ContentType": "application/json", "Accept": "*/*"}
+        api_version = "v2.5"
+        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
+                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+        infoblox_address = context.resource.address
+        infoblox_url = f"https://{infoblox_address}/wapi/{api_version}/record:host?name~={dns_name}"
+        infoblox_username = context.resource.attributes.get(f"{context.resource.model}.User")
+        infoblox_password = cs_api.DecryptPassword(context.resource.attributes.get(
+            f"{context.resource.model}.Password")).Value
+        try:
+            cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"Request:\n{infoblox_url}")
+            result = requests.get(infoblox_url, headers=headers, auth=HTTPBasicAuth(infoblox_username,
+                                                                                    infoblox_password), verify=False)
+            content = result.content.decode()
+            if result.status_code > 299:
+                raise Exception(f"InfoBlox returned error code: '{result.status_code}', content: '{content}'")
+            else:
+                cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
+                                                       f"InfoBlox configured.\nResult:\n{content}")
+        except Exception as e:
+            raise Exception(f"Error sending request to InfoBlox. Error: {e}")
 
