@@ -58,13 +58,18 @@ class InfobloxadminDriver (ResourceDriverInterface):
         if ip_address:
             request_body["ipv4addrs"] = [{"ipv4addr": ip_address}]
         elif network_address:
-            request_body["ipv4addrs"] = [{"ipv4addr": f"func:nextavailableip:{network_address}"}]
+            # request_body["ipv4addrs"] = [{"ipv4addr": f"func:nextavailableip:{network_address}"}]
+            request_body["ipv4addrs"] = [{"ipv4addr": {"_object_function": "next_available_ip",
+                                                       "_object": "network",
+                                                       "_object_parameters": {"network": network_address},
+                                                       "_parameters": {"num": 1}}}]
         else:
             raise Exception("'IP Address' or 'Network Address' must be supplied")
         request_body["ipv4addrs"][0]["view"] = infoblox_view
 
         if mac_address:
             request_body["ipv4addrs"][0]["mac"] = mac_address
+            request_body["ipv4addrs"][0]["configure_for_dhcp"] = True
         try:
             result = requests.post(infoblox_url, headers=headers, json=request_body,
                                    auth=HTTPBasicAuth(infoblox_username, infoblox_password), verify=False)
