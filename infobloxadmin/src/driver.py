@@ -67,7 +67,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             request_body["ipv4addrs"][0]["mac"] = mac_address
         try:
             result = requests.post(infoblox_url, headers=headers, json=request_body,
-                                   auth=HTTPBasicAuth(infoblox_username, infoblox_password))
+                                   auth=HTTPBasicAuth(infoblox_username, infoblox_password), verify=False)
             content = result.content.decode()
             if result.status_code > 299:
                 raise Exception(f"InfoBlox returned error code: '{result.status_code}', content: '{content}'")
