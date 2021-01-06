@@ -62,7 +62,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
             request_body["ipv4addrs"] = [{"ipv4addr": {"_object_function": "next_available_ip",
                                                        "_object": "network",
                                                        "_object_parameters": {"network": network_address},
-                                                       "_parameters": {"num": 1}}}]
+                                                       "_parameters": {"num": 1},
+                                                       "_result_field": "ips"}}]
         else:
             raise Exception("'IP Address' or 'Network Address' must be supplied")
         request_body["ipv4addrs"][0]["view"] = infoblox_view
