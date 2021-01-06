@@ -68,11 +68,12 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             result = requests.post(infoblox_url, headers=headers, json=request_body,
                                    auth=HTTPBasicAuth(infoblox_username, infoblox_password))
+            content = result.content.decode()
             if result.status_code > 299:
-                raise Exception(result.content)
+                raise Exception(f"InfoBlox returned error code: '{result.status_code}', content: '{content}'")
             else:
                 cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
-                                                       f"InfoBlox configured.\nResult:\n{result}")
+                                                       f"InfoBlox configured.\nResult:\n{content}")
         except Exception as e:
             raise Exception(f"Error sending request to InfoBlox. Error: {e}")
 
