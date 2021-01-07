@@ -5,6 +5,7 @@ from cloudshell.api.cloudshell_api import CloudShellAPISession
 from infoblox_client import objects
 from infoblox_client import connector
 import jsonpickle
+import logging
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
@@ -44,7 +45,11 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                    f"Connecting to InfoBlox: '{infoblox_address}'")
+
+            connector.LOG = logging.basicConfig(filename="c:\\Temp\infoblox.log", level=0, filemode="a")
+            connector.LOG.info("Log started")
             infoblox_connector = connector.Connector(infoblox_config)
+
             return infoblox_connector
         except Exception as e:
             raise Exception(f"Error connecting to InfoBlox. Error: {e}")
