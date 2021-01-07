@@ -24,7 +24,6 @@ class InfobloxadminDriver (ResourceDriverInterface):
         This is a good place to load and cache the driver configuration, initiate sessions etc.
         :param InitCommandContext context: the context the command runs on
         """
-        sys.stdout = io.StringIO()
         pass
 
     def cleanup(self):
@@ -76,11 +75,18 @@ class InfobloxadminDriver (ResourceDriverInterface):
             dns_name = dns_name + infoblox_domain_suffix
 
         infoblox_conn = self._infoblox_connector(context)
+        ava_ip = objects.IPAllocation.next_available_ip_from_range(infoblox_view, ip_address, ip_address)
+        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
+                                               f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
-            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip_address,
-                                             mac=mac_address, configure_for_dhcp=True)
+            ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
-            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip_address)
+            ip = objects.IP.create(ip=ava_ip)
+        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
+                                               f"IP: {jsonpickle.dumps(ip)}")
+
+        data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
+
         return jsonpickle.dumps(data)
 
     def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
@@ -104,13 +110,14 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_conn = self._infoblox_connector(context)
 
         ava_ip = objects.IPAllocation.next_available_ip_from_cidr(infoblox_view, network_address)
-        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"IP: {jsonpickle.dumps(ava_ip)}")
+        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
             ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
             ip = objects.IP.create(ip=ava_ip)
-
-        data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip, mac=mac_address,
+        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
+                                               f"IP: {jsonpickle.dumps(ip)}")
+        data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                          configure_for_dhcp=True)
 
         return jsonpickle.dumps(data)
@@ -124,10 +131,10 @@ class InfobloxadminDriver (ResourceDriverInterface):
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
 
+        infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
-        data = infoblox_conn.get_object("host:record", {"name~": dns_name})
-        with open("c:/temp/infoblox.log", "a") as f:
-            f.write(f"{sys.stdout.getvalue()}")
+        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
+
         return jsonpickle.dumps(data)
 
     def get_host_record_by_ip(self, context, ip_address):
@@ -138,9 +145,10 @@ class InfobloxadminDriver (ResourceDriverInterface):
         """
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
-
+        infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
-        data = infoblox_conn.get_object("host:record", {"ipv4addr~": ip_address})
+        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
+
         return jsonpickle.dumps(data)
 
     def delete_host_record(self, context, dns_name):
