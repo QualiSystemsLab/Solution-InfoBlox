@@ -45,7 +45,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                    f"Connecting to InfoBlox: '{infoblox_address}'")
-
+            connector.LOG.level = 0
             connector.LOG.handlers.append(logging.FileHandler("C:/Temp/Infoblox.log", "a"))
             connector.LOG.info("Log Started")
             infoblox_connector = connector.Connector(infoblox_config)
