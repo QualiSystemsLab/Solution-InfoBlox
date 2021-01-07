@@ -4,6 +4,7 @@ from cloudshell.shell.core.driver_context import InitCommandContext, ResourceCom
 from cloudshell.api.cloudshell_api import CloudShellAPISession
 from infoblox_client import objects
 from infoblox_client import connector
+import jsonpickle
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
@@ -72,7 +73,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
                                              mac=mac_address, configure_for_dhcp=True)
         else:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip_address)
-        return data
+        return jsonpickle.dumps(data)
 
     def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
         """
@@ -95,6 +96,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_conn = self._infoblox_connector(context)
 
         ava_ip = objects.IPAllocation.next_available_ip_from_cidr(infoblox_view, network_address)
+        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"IP: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
             ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
@@ -103,7 +105,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip, mac=mac_address,
                                          configure_for_dhcp=True)
 
-        return data
+        return jsonpickle.dumps(data)
 
     def get_host_record_by_name(self, context, dns_name):
         """
@@ -116,7 +118,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         infoblox_conn = self._infoblox_connector(context)
         data = infoblox_conn.get_object("host:record", {"name": dns_name})
-        return data
+        return jsonpickle.dumps(data)
 
     def get_host_record_by_ip(self, context, ip_address):
         """
@@ -129,7 +131,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         infoblox_conn = self._infoblox_connector(context)
         data = infoblox_conn.get_object("host:record", {"ipv4addr": ip_address})
-        return data
+        return jsonpickle.dumps(data)
 
     def delete_host_record(self, context, dns_name):
         raise NotImplementedError
