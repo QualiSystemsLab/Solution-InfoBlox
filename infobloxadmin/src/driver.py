@@ -75,13 +75,13 @@ class InfobloxadminDriver (ResourceDriverInterface):
             dns_name = dns_name + infoblox_domain_suffix
 
         infoblox_conn = self._infoblox_connector(context)
-        ava_ip = objects.IPAllocation.next_available_ip_from_range(net_view, ip_address, ip_address)
-        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
-                                               f"IP ava: {jsonpickle.dumps(ava_ip)}")
+        # ava_ip = objects.IPAllocation.next_available_ip_from_range(net_view, ip_address, ip_address)
+        # cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
+        #                                        f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
-            ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
+            ip = objects.IP.create(ip=ip_address, mac=mac_address, configure_for_dhcp=True)
         else:
-            ip = objects.IP.create(ip=ava_ip)
+            ip = objects.IP.create(ip=ip_address)
         cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                f"IP: {jsonpickle.dumps(ip)}")
 
