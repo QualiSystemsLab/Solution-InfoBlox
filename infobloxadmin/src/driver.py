@@ -56,7 +56,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         except Exception as e:
             raise Exception(f"Error connecting to InfoBlox. Error: {e}")
 
-    def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address):
+    def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address, net_view):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
@@ -75,7 +75,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             dns_name = dns_name + infoblox_domain_suffix
 
         infoblox_conn = self._infoblox_connector(context)
-        ava_ip = objects.IPAllocation.next_available_ip_from_range(None, ip_address, ip_address)
+        ava_ip = objects.IPAllocation.next_available_ip_from_range(net_view, ip_address, ip_address)
         cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
