@@ -150,5 +150,31 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = self._infoblox_request(context, "get", url)
         return data
 
+    def get_host_record_by_ip(self, context, ip_address):
+        """
+        :param ResourceCommandContext context:
+        :param str ip_address:
+        :return:
+        """
+        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
+                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+        url = f"ipv4address?ip_address={ip_address}"
+
+        data = self._infoblox_request(context, "get", url)
+        return data
+
+    def get_host_record_by_mac(self, context, mac):
+        """
+        :param ResourceCommandContext context:
+        :param str mac:
+        :return:
+        """
+        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
+                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+        url = f"fixedaddress?_return_fields%2B=mac&mac={mac}"
+
+        data = self._infoblox_request(context, "get", url)
+        return data
+
     def delete_host_record(self, context, dns_name):
         raise NotImplementedError
