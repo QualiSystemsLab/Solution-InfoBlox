@@ -6,6 +6,8 @@ from infoblox_client import objects
 from infoblox_client import connector
 import jsonpickle
 import logging
+import io
+import sys
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
@@ -22,6 +24,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         This is a good place to load and cache the driver configuration, initiate sessions etc.
         :param InitCommandContext context: the context the command runs on
         """
+        sys.stdout = io.StringIO()
         pass
 
     def cleanup(self):
@@ -123,6 +126,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         infoblox_conn = self._infoblox_connector(context)
         data = infoblox_conn.get_object("host:record", {"name~": dns_name})
+        with open("c:/temp/infoblox.log", "a") as f:
+            f.write(f"{sys.stdout.getvalue()}")
         return jsonpickle.dumps(data)
 
     def get_host_record_by_ip(self, context, ip_address):
