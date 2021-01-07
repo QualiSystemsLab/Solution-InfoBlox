@@ -117,7 +117,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
 
         infoblox_conn = self._infoblox_connector(context)
-        data = infoblox_conn.get_object("host:record", {"name": dns_name})
+        data = infoblox_conn.get_object("host:record", {"name~": dns_name})
         return jsonpickle.dumps(data)
 
     def get_host_record_by_ip(self, context, ip_address):
@@ -130,7 +130,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
 
         infoblox_conn = self._infoblox_connector(context)
-        data = infoblox_conn.get_object("host:record", {"ipv4addr": ip_address})
+        data = infoblox_conn.get_object("host:record", {"ipv4addr~": ip_address})
         return jsonpickle.dumps(data)
 
     def delete_host_record(self, context, dns_name):
