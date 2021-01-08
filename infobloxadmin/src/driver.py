@@ -75,21 +75,16 @@ class InfobloxadminDriver (ResourceDriverInterface):
             dns_name = dns_name + infoblox_domain_suffix
 
         infoblox_conn = self._infoblox_connector(context)
-        # ava_ip = objects.IPAllocation.next_available_ip_from_range(net_view, ip_address, ip_address)
-        # cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
-        #                                        f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
             ip = objects.IP.create(ip=ip_address, mac=mac_address, configure_for_dhcp=True)
         else:
             ip = objects.IP.create(ip=ip_address)
-        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
-                                               f"IP: {jsonpickle.dumps(ip)}")
 
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
 
         return jsonpickle.dumps(data)
 
-    def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
+    def create_network_ip_host_record(self, context, dns_name, network_address, mac_address, net_view):
         """
         :param ResourceCommandContext context:
         :param str network_address:
@@ -109,12 +104,14 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         infoblox_conn = self._infoblox_connector(context)
 
-        ava_ip = objects.IPAllocation.next_available_ip_from_cidr(infoblox_view, network_address)
+        ava_ip = objects.IPAllocation.next_available_ip_from_cidr(net_view, network_address)
         cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"IP ava: {jsonpickle.dumps(ava_ip)}")
         if mac_address:
             ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
             ip = objects.IP.create(ip=ava_ip)
+        if not net_view:
+            ip["_ip"]["next_available_ip"] = ip["_ip"]["next_available_ip"].replace("null", "")
         cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                f"IP: {jsonpickle.dumps(ip)}")
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
