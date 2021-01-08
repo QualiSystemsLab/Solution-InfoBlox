@@ -36,6 +36,10 @@ node_types:
         description: InfoBlox Default View
         type: string
         tags: [ user_input ]
+      NetworkView:
+        description: InfoBlox Network View
+        type: string
+        tags: [ user_input ]
     #  Service Categories:
     #    type: list
     #    default: [My Category 1, My Category 2]    

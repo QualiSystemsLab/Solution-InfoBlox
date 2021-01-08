@@ -33,6 +33,15 @@ class InfobloxadminDriver (ResourceDriverInterface):
         """
         pass
 
+    def _get_host_domain_name(self, context, host_name):
+        infoblox_domain_suffix = context.resource.attributes.get(f"{context.resource.model}.DomainSuffix")
+        if not infoblox_domain_suffix.startswith("."):
+            infoblox_domain_suffix = "." + infoblox_domain_suffix
+
+        if not host_name.endswith(infoblox_domain_suffix):
+            host_name = host_name + infoblox_domain_suffix
+        return host_name
+
     def _infoblox_connector(self, context):
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
@@ -67,12 +76,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
-        infoblox_domain_suffix = context.resource.attributes.get(f"{context.resource.model}.DomainSuffix")
-        if not infoblox_domain_suffix.startswith("."):
-            infoblox_domain_suffix = "." + infoblox_domain_suffix
-
-        if not dns_name.endswith(infoblox_domain_suffix):
-            dns_name = dns_name + infoblox_domain_suffix
+        dns_name = self._get_host_domain_name(context, dns_name)
 
         infoblox_conn = self._infoblox_connector(context)
         if mac_address:
@@ -84,7 +88,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         return jsonpickle.dumps(data)
 
-    def create_network_ip_host_record(self, context, dns_name, network_address, mac_address, net_view):
+    def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
         """
         :param ResourceCommandContext context:
         :param str network_address:
@@ -95,25 +99,17 @@ class InfobloxadminDriver (ResourceDriverInterface):
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
-        infoblox_domain_suffix = context.resource.attributes.get(f"{context.resource.model}.DomainSuffix")
-        if not infoblox_domain_suffix.startswith("."):
-            infoblox_domain_suffix = "." + infoblox_domain_suffix
-
-        if not dns_name.endswith(infoblox_domain_suffix):
-            dns_name = dns_name + infoblox_domain_suffix
+        infoblox_network_view = context.resource.attributes.get(f"{context.resource.model}.NetworkView")
+        dns_name = self._get_host_domain_name(context, dns_name)
 
         infoblox_conn = self._infoblox_connector(context)
 
-        ava_ip = objects.IPAllocation.next_available_ip_from_cidr(net_view, network_address)
-        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id, f"IP ava: {jsonpickle.dumps(ava_ip)}")
+        ava_ip = objects.IPAllocation.next_available_ip_from_cidr(infoblox_network_view, network_address)
         if mac_address:
             ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
             ip = objects.IP.create(ip=ava_ip)
-        if not net_view:
-            ip._ip.next_available_ip = ip._ip.next_available_ip.replace("null", "")
-        cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
-                                               f"IP: {jsonpickle.dumps(ip)}")
+
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                          configure_for_dhcp=True)
 
@@ -130,6 +126,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
+        dns_name = self._get_host_domain_name(context, dns_name)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
 
         return jsonpickle.dumps(data)
