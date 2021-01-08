@@ -111,7 +111,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         else:
             ip = objects.IP.create(ip=ava_ip)
         if not net_view:
-            ip["_ip"]["next_available_ip"] = ip["_ip"]["next_available_ip"].replace("null", "")
+            ip._ip.next_available_ip = ip._ip.next_available_ip.replace("null", "")
         cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                f"IP: {jsonpickle.dumps(ip)}")
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
