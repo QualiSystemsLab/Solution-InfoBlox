@@ -69,6 +69,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             infoblox_connector = connector.Connector(infoblox_config)
             return infoblox_connector
         except Exception as e:
+            logger.error(f"Error connecting to infoblox: '{e}'")
             raise Exception(f"Error connecting to InfoBlox. Error: {e}")
 
     def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address):
@@ -128,12 +129,13 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :return:
         """
         logger = self._get_logger(context)
+        logger.info(f"Getting info for host with Name: '{dns_name}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
-        return jsonpickle.dumps(data)
+        return data
 
     def get_host_record_by_ip(self, context, ip_address):
         """
@@ -141,11 +143,17 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str ip_address:
         :return:
         """
+        logger = self._get_logger(context)
+        logger.info(f"Getting info for host with IP: '{ip_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
-        return jsonpickle.dumps(data)
+        return data
 
     def delete_host_record(self, context, dns_name):
-        raise NotImplementedError
+        logger = self._get_logger(context)
+        logger.debug(f"Delete Host record:\n{dns_name}")
+        host_object = self.get_host_record_by_name(context, dns_name)
+        host_object.delete()
+        logger.debug(f"Host Record delete:\n{dns_name}")
