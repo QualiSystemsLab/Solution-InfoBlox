@@ -5,8 +5,8 @@ from cloudshell.api.cloudshell_api import CloudShellAPISession
 from infoblox_client import objects
 from infoblox_client import connector
 import jsonpickle
-import logging
-from cloudshell.core.logger.qs_logger import get_qs_logger
+from cloudshell.logging.qs_logger import get_qs_logger
+
 
 # TODO Add shellfoundry generate resource context
 
@@ -113,7 +113,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         self.logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
-    def _get_host_record_by_name(self, context, dns_name):
+    def get_host_record_by_name(self, context, dns_name):
         """
         :param ResourceCommandContext context:
         :param str dns_name:
@@ -126,7 +126,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         self.logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
-    def _get_host_record_by_ip(self, context, ip_address):
+    def get_host_record_by_ip(self, context, ip_address):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
