@@ -12,6 +12,7 @@ from cloudshell.logging.qs_logger import get_qs_logger
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
+    COMMENT = "Created by Quali CloudShell"
 
     def __init__(self):
         """
@@ -93,7 +94,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
             ip = objects.IP.create(ip=ip_address)
 
         try:
-            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
+            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
+                                             comment=self.COMMENT)
             logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
@@ -124,7 +126,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             ip = objects.IP.create(ip=ava_ip)
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
-                                             configure_for_dhcp=True)
+                                             configure_for_dhcp=True, comment=self.COMMENT)
             logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
@@ -144,6 +146,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
+        if not data:
+            raise Exception(f"Host record with name '{dns_name}' not found")
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
@@ -158,6 +162,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
+        if not data:
+            raise Exception(f"Host record with IP '{ip_address}' not found")
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
@@ -166,6 +172,10 @@ class InfobloxadminDriver (ResourceDriverInterface):
         logger.debug(f"Delete Host record:\n{dns_name}")
         try:
             host_object = self._get_host_record_by_name(context, dns_name)
+            logger.debug(f"Device '{dns_name}' comment: '{host_object.comment}'")
+            if host_object.comment != self.COMMENT:
+                logger.error(f"Device '{dns_name}' comment: '{host_object.comment}'")
+                raise Exception(f"Unable to delete '{dns_name}' as it was not created by Quali CloudShell")
             host_object.delete()
             msg = f"Host Record deleted:\n{dns_name}"
             logger.debug(msg)
