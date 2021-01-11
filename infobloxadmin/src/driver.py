@@ -69,8 +69,9 @@ class InfobloxadminDriver (ResourceDriverInterface):
             infoblox_connector = connector.Connector(infoblox_config)
             return infoblox_connector
         except Exception as e:
-            logger.error(f"Error connecting to infoblox: '{e}'")
-            raise Exception(f"Error connecting to InfoBlox. Error: {e}")
+            msg = f"Error connecting to infoblox: '{e}'"
+            logger.error(msg)
+            raise Exception(msg)
 
     def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address):
         """
@@ -91,9 +92,14 @@ class InfobloxadminDriver (ResourceDriverInterface):
         else:
             ip = objects.IP.create(ip=ip_address)
 
-        data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
-        logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
-        return jsonpickle.dumps(data)
+        try:
+            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
+            logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            return "Host record created"
+        except Exception as e:
+            msg = f"Error creating host record with fixed IP. '{e}'"
+            logger.error(msg)
+            raise
 
     def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
         """
@@ -116,13 +122,17 @@ class InfobloxadminDriver (ResourceDriverInterface):
             ip = objects.IP.create(ip=ava_ip, mac=mac_address, configure_for_dhcp=True)
         else:
             ip = objects.IP.create(ip=ava_ip)
+        try:
+            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
+                                             configure_for_dhcp=True)
+            logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            return "Host record created"
+        except Exception as e:
+            msg = f"Error creating host record with network. '{e}'"
+            logger.error(msg)
+            raise
 
-        data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
-                                         configure_for_dhcp=True)
-        logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
-        return jsonpickle.dumps(data)
-
-    def get_host_record_by_name(self, context, dns_name):
+    def _get_host_record_by_name(self, context, dns_name):
         """
         :param ResourceCommandContext context:
         :param str dns_name:
@@ -137,7 +147,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
-    def get_host_record_by_ip(self, context, ip_address):
+    def _get_host_record_by_ip(self, context, ip_address):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
@@ -154,6 +164,13 @@ class InfobloxadminDriver (ResourceDriverInterface):
     def delete_host_record(self, context, dns_name):
         logger = self._get_logger(context)
         logger.debug(f"Delete Host record:\n{dns_name}")
-        host_object = self.get_host_record_by_name(context, dns_name)
-        host_object.delete()
-        logger.debug(f"Host Record delete:\n{dns_name}")
+        try:
+            host_object = self._get_host_record_by_name(context, dns_name)
+            host_object.delete()
+            msg = f"Host Record deleted:\n{dns_name}"
+            logger.debug(msg)
+            return msg
+        except Exception as e:
+            logger.error(f"Error deleting host. {e}")
+            raise
+
