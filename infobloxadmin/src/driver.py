@@ -145,7 +145,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
-        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
+        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name, return_fields=["comment"])
         if not data:
             raise Exception(f"Host record with name '{dns_name}' not found")
         logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
