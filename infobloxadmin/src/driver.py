@@ -6,8 +6,9 @@ from infoblox_client import objects
 from infoblox_client import connector
 import jsonpickle
 import logging
-import io
-import sys
+from cloudshell.core.logger.qs_logger import get_qs_logger
+
+# TODO Add shellfoundry generate resource context
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
@@ -24,6 +25,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         This is a good place to load and cache the driver configuration, initiate sessions etc.
         :param InitCommandContext context: the context the command runs on
         """
+        self.logger = get_qs_logger("InfoBlox")
         pass
 
     def cleanup(self):
@@ -50,22 +52,20 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_username = context.resource.attributes.get(f"{context.resource.model}.User")
         infoblox_password = cs_api.DecryptPassword(context.resource.attributes.get(
             f"{context.resource.model}.Password")).Value
-
+        # infoblox version as attribute
         infoblox_config = {"host": infoblox_address, "username": infoblox_username, "password": infoblox_password,
                            "ssl_verify": False, "wapi_version": "2.5"}
         try:
             cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                    f"Connecting to InfoBlox: '{infoblox_address}'")
-            connector.LOG.level = 0
-            connector.LOG.handlers.append(logging.FileHandler("C:/Temp/Infoblox.log", "a"))
-            connector.LOG.info("Log Started")
+            self.logger.info(f"Connecting to InfoBlox: '{infoblox_address}'")
+            connector.LOG = self.logger
             infoblox_connector = connector.Connector(infoblox_config)
-
             return infoblox_connector
         except Exception as e:
             raise Exception(f"Error connecting to InfoBlox. Error: {e}")
 
-    def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address, net_view):
+    def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
@@ -73,8 +73,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str mac_address:
         :return:
         """
-        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
-                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+        self.logger.info(f"Creating fixed IP record for Name: '{dns_name}',IP: '{ip_address}',MAC '{mac_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         dns_name = self._get_host_domain_name(context, dns_name)
 
@@ -85,7 +84,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             ip = objects.IP.create(ip=ip_address)
 
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
-
+        self.logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
@@ -96,8 +95,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str mac_address:
         :return:
         """
-        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
-                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+        self.logger.info(f"Creating Network IP record for Name: '{dns_name}',Network: '{network_address}',MAC '{mac_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_network_view = context.resource.attributes.get(f"{context.resource.model}.NetworkView")
         dns_name = self._get_host_domain_name(context, dns_name)
@@ -112,37 +110,32 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                          configure_for_dhcp=True)
-
+        self.logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
-    def get_host_record_by_name(self, context, dns_name):
+    def _get_host_record_by_name(self, context, dns_name):
         """
         :param ResourceCommandContext context:
         :param str dns_name:
         :return:
         """
-        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
-                                      token_id=context.connectivity.admin_auth_token, domain="Global")
-
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
-
+        self.logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
-    def get_host_record_by_ip(self, context, ip_address):
+    def _get_host_record_by_ip(self, context, ip_address):
         """
         :param ResourceCommandContext context:
         :param str ip_address:
         :return:
         """
-        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
-                                      token_id=context.connectivity.admin_auth_token, domain="Global")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
-
+        self.logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def delete_host_record(self, context, dns_name):
