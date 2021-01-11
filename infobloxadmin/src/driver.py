@@ -25,7 +25,6 @@ class InfobloxadminDriver (ResourceDriverInterface):
         This is a good place to load and cache the driver configuration, initiate sessions etc.
         :param InitCommandContext context: the context the command runs on
         """
-        self.logger = get_qs_logger("InfoBlox")
         pass
 
     def cleanup(self):
@@ -34,6 +33,12 @@ class InfobloxadminDriver (ResourceDriverInterface):
         This is a good place to close any open sessions, finish writing to log files
         """
         pass
+
+    @staticmethod
+    def _get_logger(context):
+        logger = get_qs_logger(context.reservation.reservation_id)
+        logger.setLevel(0)
+        return logger
 
     def _get_host_domain_name(self, context, host_name):
         infoblox_domain_suffix = context.resource.attributes.get(f"{context.resource.model}.DomainSuffix")
@@ -45,6 +50,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         return host_name
 
     def _infoblox_connector(self, context):
+        logger = self._get_logger(context)
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
                                       token_id=context.connectivity.admin_auth_token, domain="Global")
 
@@ -58,8 +64,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             cs_api.WriteMessageToReservationOutput(context.reservation.reservation_id,
                                                    f"Connecting to InfoBlox: '{infoblox_address}'")
-            self.logger.info(f"Connecting to InfoBlox: '{infoblox_address}'")
-            connector.LOG = self.logger
+            logger.info(f"Connecting to InfoBlox: '{infoblox_address}'")
+            connector.LOG = logger
             infoblox_connector = connector.Connector(infoblox_config)
             return infoblox_connector
         except Exception as e:
@@ -73,7 +79,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str mac_address:
         :return:
         """
-        self.logger.info(f"Creating fixed IP record for Name: '{dns_name}',IP: '{ip_address}',MAC '{mac_address}'")
+        logger = self._get_logger(context)
+        logger.info(f"Creating fixed IP record for Name: '{dns_name}',IP: '{ip_address}',MAC '{mac_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         dns_name = self._get_host_domain_name(context, dns_name)
 
@@ -84,7 +91,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
             ip = objects.IP.create(ip=ip_address)
 
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip)
-        self.logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+        logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def create_network_ip_host_record(self, context, dns_name, network_address, mac_address):
@@ -95,7 +102,8 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str mac_address:
         :return:
         """
-        self.logger.info(f"Creating Network IP record for Name: '{dns_name}',Network: '{network_address}',MAC '{mac_address}'")
+        logger = self._get_logger(context)
+        logger.info(f"Creating Network IP record for Name: '{dns_name}',Network: '{network_address}',MAC '{mac_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_network_view = context.resource.attributes.get(f"{context.resource.model}.NetworkView")
         dns_name = self._get_host_domain_name(context, dns_name)
@@ -110,7 +118,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                          configure_for_dhcp=True)
-        self.logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+        logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def get_host_record_by_name(self, context, dns_name):
@@ -119,11 +127,12 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param str dns_name:
         :return:
         """
+        logger = self._get_logger(context)
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name)
-        self.logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def get_host_record_by_ip(self, context, ip_address):
@@ -135,7 +144,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
-        self.logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return jsonpickle.dumps(data)
 
     def delete_host_record(self, context, dns_name):
