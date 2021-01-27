@@ -168,6 +168,11 @@ class InfobloxadminDriver (ResourceDriverInterface):
         return data
 
     def delete_host_record(self, context, dns_name):
+        """
+        :param ResourceCommandContext context:
+        :param str dns_name:
+        :return:
+        """
         logger = self._get_logger(context)
         logger.debug(f"Delete Host record:\n{dns_name}")
         try:
@@ -183,4 +188,30 @@ class InfobloxadminDriver (ResourceDriverInterface):
         except Exception as e:
             logger.error(f"Error deleting host. {e}")
             raise
+
+    def delete_all_records(self, context):
+        """
+        :param ResourceCommandContext context:
+        :return:
+        """
+        DNS_ATTRIBUTE = "DNS Name"
+        logger = self._get_logger(context)
+        logger.info("Starting delete all records")
+        cs_api = CloudShellAPISession(host=context.connectivity.server_address,
+                                      token_id=context.connectivity.admin_auth_token, domain="Global")
+
+        reservation_details = cs_api.GetReservationDetails(context.reservation.reservation_id).ReservationDescription
+        for resource in reservation_details.Resources:
+            attribute_name = "{}.{}".format(resource.ResourceModelName, DNS_ATTRIBUTE)
+            try:
+                result = cs_api.GetAttributeValue(resource.Name, attribute_name).Value
+                if result:
+                    try:
+                        self.delete_host_record(context, result)
+                    except Exception as e:
+                        logger.error(f"Error deleting record for '{result}'. error: {e}")
+            except Exception as e:
+                logger.info(f"Error getting DNS Attribute '{DNS_ATTRIBUTE}' on resource '{resource.Name}'. Error: {e}")
+
+
 
