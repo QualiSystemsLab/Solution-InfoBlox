@@ -96,7 +96,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                              comment=self.COMMENT)
-            logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with fixed IP. '{e}'"
@@ -127,7 +127,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                              configure_for_dhcp=True, comment=self.COMMENT)
-            logger.debug(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with network. '{e}'"
@@ -148,7 +148,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name, return_fields=["comment"])
         if not data:
             raise Exception(f"Host record with name '{dns_name}' not found")
-        logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
     def _get_host_record_by_ip(self, context, ip_address):
@@ -164,7 +164,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
         if not data:
             raise Exception(f"Host record with IP '{ip_address}' not found")
-        logger.debug(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
     def delete_host_record(self, context, dns_name):
@@ -174,16 +174,16 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :return:
         """
         logger = self._get_logger(context)
-        logger.debug(f"Delete Host record:\n{dns_name}")
+        logger.info(f"Delete Host record:\n{dns_name}")
         try:
             host_object = self._get_host_record_by_name(context, dns_name)
-            logger.debug(f"Device '{dns_name}' comment: '{host_object.comment}'")
+            logger.info(f"Device '{dns_name}' comment: '{host_object.comment}'")
             if host_object.comment != self.COMMENT:
                 logger.error(f"Device '{dns_name}' comment: '{host_object.comment}'")
                 raise Exception(f"Unable to delete '{dns_name}' as it was not created by Quali CloudShell")
             host_object.delete()
             msg = f"Host Record deleted:\n{dns_name}"
-            logger.debug(msg)
+            logger.info(msg)
             return msg
         except Exception as e:
             logger.error(f"Error deleting host. {e}")
