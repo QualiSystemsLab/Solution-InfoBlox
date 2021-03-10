@@ -96,7 +96,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                              comment=self.COMMENT)
-            logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            #logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with fixed IP. '{e}'"
@@ -127,7 +127,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                              configure_for_dhcp=True, comment=self.COMMENT)
-            logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            #logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with network. '{e}'"
@@ -148,7 +148,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name, return_fields=["comment"])
         if not data:
             raise Exception(f"Host record with name '{dns_name}' not found")
-        logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        # logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
     def _get_host_record_by_ip(self, context, ip_address):
@@ -164,7 +164,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
         if not data:
             raise Exception(f"Host record with IP '{ip_address}' not found")
-        logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+        # logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
     def delete_host_record(self, context, dns_name):
