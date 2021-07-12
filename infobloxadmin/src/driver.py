@@ -75,13 +75,13 @@ class InfobloxadminDriver (ResourceDriverInterface):
         logger = self._get_logger(context)
         logger.info(f"Creating DNS records for Name: '{dns_name}',IP: '{ip_address}',MAC '{mac_address}'")
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
-        dns_name = self._get_host_domain_name(context, dns_name)
-
+        dns_domain_name = self._get_host_domain_name(context, dns_name)
+        infoblox_domain_suffix = context.resource.attributes.get(f"{context.resource.model}.DomainSuffix")
         infoblox_conn = self._infoblox_connector(context)
 
         try:
-            data = objects.PtrRecord.create(infoblox_conn, comment=self.COMMENT, dns_name=dns_name, ipv4addr=ip_address,
-                                            name=dns_name, view=infoblox_view)
+            data = objects.PtrRecord.create(infoblox_conn, comment=self.COMMENT, dns_name=dns_domain_name, ipv4addr=ip_address,
+                                            name=dns_name, view=infoblox_view, ptrdname=infoblox_domain_suffix)
             # logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "PTR Record record created"
         except Exception as e:
