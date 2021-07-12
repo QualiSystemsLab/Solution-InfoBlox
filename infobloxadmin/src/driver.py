@@ -80,7 +80,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_conn = self._infoblox_connector(context)
 
         try:
-            data = objects.PtrRecord.create(infoblox_conn, comment=self.COMMENT, dns_name=dns_domain_name, ipv4addr=ip_address,
+            data = objects.PtrRecord.create(infoblox_conn, comment=self.COMMENT, ipv4addr=ip_address,
                                             name=dns_name, view=infoblox_view, ptrdname=infoblox_domain_suffix)
             # logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "PTR Record record created"
