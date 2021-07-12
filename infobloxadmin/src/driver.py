@@ -8,9 +8,6 @@ import jsonpickle
 from cloudshell.logging.qs_logger import get_qs_logger
 
 
-# TODO Add shellfoundry generate resource context
-
-
 class InfobloxadminDriver (ResourceDriverInterface):
     COMMENT = "Created by Quali CloudShell"
 
@@ -73,6 +70,24 @@ class InfobloxadminDriver (ResourceDriverInterface):
             msg = f"Error connecting to infoblox: '{e}'"
             logger.error(msg)
             raise Exception(msg)
+
+    def create_dns_records(self, context, dns_name, ip_address, mac_address):
+        logger = self._get_logger(context)
+        logger.info(f"Creating DNS records for Name: '{dns_name}',IP: '{ip_address}',MAC '{mac_address}'")
+        infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
+        dns_name = self._get_host_domain_name(context, dns_name)
+
+        infoblox_conn = self._infoblox_connector(context)
+
+        try:
+            data = objects.PtrRecord.create(infoblox_conn, comment=self.COMMENT, dns_name=dns_name, ipv4addr=ip_address,
+                                            name=dns_name, view=infoblox_view)
+            # logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            return "PTR Record record created"
+        except Exception as e:
+            msg = f"Error creating PTR record. '{e}'"
+            logger.error(msg)
+            raise
 
     def create_fixed_ip_host_record(self, context, dns_name, ip_address, mac_address):
         """
