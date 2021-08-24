@@ -1,10 +1,12 @@
 from cloudshell.shell.core.resource_driver_interface import ResourceDriverInterface
-from cloudshell.shell.core.driver_context import InitCommandContext, ResourceCommandContext, AutoLoadResource, \
-    AutoLoadAttribute, AutoLoadDetails, CancellationContext
+from cloudshell.shell.core.driver_context import InitCommandContext, ResourceCommandContext
 from cloudshell.api.cloudshell_api import CloudShellAPISession
 from infoblox_client import objects
 from infoblox_client import connector
 from cloudshell.logging.qs_logger import get_qs_logger
+
+
+DNS_ATTRIBUTE = "DNS Name"
 
 
 class InfobloxadminDriver (ResourceDriverInterface):
@@ -92,7 +94,6 @@ class InfobloxadminDriver (ResourceDriverInterface):
         try:
             data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
                                              comment=self.COMMENT)
-            #logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with fixed IP. '{e}'"
@@ -121,9 +122,15 @@ class InfobloxadminDriver (ResourceDriverInterface):
         else:
             ip = objects.IP.create(ip=ava_ip)
         try:
-            data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
-                                             configure_for_dhcp=True, comment=self.COMMENT)
-            #logger.info(f"Create Host record info:\n{jsonpickle.dumps(data)}")
+            found = self._get_host_record_by_name(context, dns_name)
+            if not found:
+                data = objects.HostRecord.create(infoblox_conn, name=dns_name, view=infoblox_view, ip=ip,
+                                                 configure_for_dhcp=True, comment=self.COMMENT)
+            else:
+                if found.ipv4addrs[0].mac == mac_address:
+                    logger.info("Host record was already existing with matching MAC and name")
+                else:
+                    raise Exception("Host Record already exists with different MAC Address")
             return "Host record created"
         except Exception as e:
             msg = f"Error creating host record with network. '{e}'"
@@ -141,10 +148,11 @@ class InfobloxadminDriver (ResourceDriverInterface):
         infoblox_view = context.resource.attributes.get(f"{context.resource.model}.View")
         infoblox_conn = self._infoblox_connector(context)
         dns_name = self._get_host_domain_name(context, dns_name)
-        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name, return_fields=["comment"])
+        data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, name=dns_name, return_fields=["comment",
+                                                                                                          "ipv4addrs"])
         if not data:
-            raise Exception(f"Host record with name '{dns_name}' not found")
-        # logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
+            logger.info(f"Host record not found for: '{dns_name}'")
+            return None
         return data
 
     def _get_host_record_by_ip(self, context, ip_address):
@@ -160,7 +168,6 @@ class InfobloxadminDriver (ResourceDriverInterface):
         data = objects.HostRecord.search(infoblox_conn, view=infoblox_view, ip=ip_address)
         if not data:
             raise Exception(f"Host record with IP '{ip_address}' not found")
-        # logger.info(f"Get Host record info:\n{jsonpickle.dumps(data)}")
         return data
 
     def delete_host_record(self, context, dns_name):
@@ -171,14 +178,17 @@ class InfobloxadminDriver (ResourceDriverInterface):
         """
         logger = self._get_logger(context)
         logger.info(f"Delete Host record:\n{dns_name}")
+        msg = f"Host Record deleted:\n{dns_name}"
         try:
             host_object = self._get_host_record_by_name(context, dns_name)
+            if not host_object:
+                logger.info(f"Host record for '{dns_name}' was not found. skipping delete")
+                return msg
             logger.info(f"Device '{dns_name}' comment: '{host_object.comment}'")
             if host_object.comment != self.COMMENT:
                 logger.error(f"Device '{dns_name}' comment: '{host_object.comment}'")
                 raise Exception(f"Unable to delete '{dns_name}' as it was not created by Quali CloudShell")
             host_object.delete()
-            msg = f"Host Record deleted:\n{dns_name}"
             logger.info(msg)
             return msg
         except Exception as e:
@@ -190,7 +200,6 @@ class InfobloxadminDriver (ResourceDriverInterface):
         :param ResourceCommandContext context:
         :return:
         """
-        DNS_ATTRIBUTE = "DNS Name"
         logger = self._get_logger(context)
         logger.info("Starting delete all records")
         cs_api = CloudShellAPISession(host=context.connectivity.server_address,
