@@ -43,9 +43,9 @@ node_types:
     #  Service Categories:
     #    type: list
     #    default: [My Category 1, My Category 2]
-    capabilities:
-      concurrent_command_capability:
-        type: cloudshell.capabilities.SupportConcurrentCommands
+#    capabilities:
+#      concurrent_command_capability:
+#        type: cloudshell.capabilities.SupportConcurrentCommands
     artifacts:
       icon:
         file: shell-icon.png
