@@ -46,7 +46,7 @@ class InfobloxadminDriver (ResourceDriverInterface):
 
         if not host_name.endswith(infoblox_domain_suffix):
             host_name = host_name + infoblox_domain_suffix
-        return host_name
+        return host_name.lower()
 
     def _infoblox_connector(self, context):
         logger = self._get_logger(context)
